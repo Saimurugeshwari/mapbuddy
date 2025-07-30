@@ -26,9 +26,12 @@ from threading import Thread
 
 def speak_text(text):
     def _speak():
-        engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
+        if os.getenv("RENDER", "false") != "true":
+            engine = pyttsx3.init()
+            engine.say(text)
+            engine.runAndWait()
+        else:
+            print(f"(Silent cloud reminder): {text}")
     Thread(target=_speak).start()
 
 async def remind_periodically(destination, purpose):
