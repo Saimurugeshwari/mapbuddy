@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MapBuddy Live Map</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+  <div id="map"></div>
+  <div id="toast">Trip Saved!</div>
+  <label>
+  <input type="checkbox" id="test-mode"> Enable Test Mode (Simulate Movement)
+</label>
+
+  <!-- Trip Form -->
+  <form id="tripForm">
+    <label for="destination">Destination:</label>
+    <input id="destination" type="text" name="destination" placeholder="Enter Destination" required>
+
+    <label for="purpose">Purpose:</label>
+    <input id="purpose" type="text" name="purpose" placeholder="Enter Purpose" required>
+
+    <button type="submit">Start Trip</button>
+  </form>
+
+  <!-- Voice Commands -->
+  <h2>Voice Command</h2>
+  <label for="audio-file">Upload Voice Command (MP3/WAV):</label>
+  <input type="file" id="audio-file" accept="audio/wav, audio/mp3">
+
+  <div>
+    <button onclick="sendVoiceCommand(event)">Send Voice Command</button>
+    <button onclick="startRecording(event)">🎙 Start Recording</button>
+    <button onclick="stopRecording()">⏹ Stop & Send</button>
+  </div>
+
+  <p id="voice-response"></p>
+
+  <!-- Map & Form Logic -->
+  <script>
+    let map;
+    let tripMarker;
+    let latestLocation = null;
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 15,
+        center: { lat: 28.6139, lng: 77.2090 }
+      });
+
+      navigator.geolocation.watchPosition((position) => {
+        latestLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+
+        map.setCenter(latestLocation);
+
+        new google.maps.Marker({
+          position: latestLocation,
+          map: map,
+          title: "You are here!"
+        });
+      });
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.style.display = "block";
+      setTimeout(() => toast.style.display = "none", 3000);
+    }
+
+    function showReminder(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.style.display = "block";
+      setTimeout(() => toast.style.display = "none", 5000);
+    }
+
+    async function drawRouteToDestination(userLocation, destination, purpose) {
+      if (!destination || !purpose) {
+        showReminder("Please enter both destination and purpose before starting the trip.");
+        return;
+      }
+
+      const directionsService = new google.maps.DirectionsService();
+      const directionsRenderer = new google.maps.DirectionsRenderer();
+      directionsRenderer.setMap(map);
+
+      const request = {
+        origin: userLocation,
+        destination: destination,
+        travelMode: google.maps.TravelMode.DRIVING
+      };
+
+      directionsService.route(request, (result, status) => {
+        if (status === "OK") {
+          directionsRenderer.setDirections(result);
+
+          const leg = result.routes[0].legs[0];
+          const infoWindow = new google.maps.InfoWindow({
+            content: `<strong>${destination}</strong><br>Purpose: ${purpose}<br>Distance: ${leg.distance.text}<br>ETA: ${leg.duration.text}`,
+            position: leg.end_location
+          });
+          infoWindow.open(map);
+          /*
+          setTimeout(() => {
+            showReminder(`Reminder: Visit ${destination} for ${purpose} at 3 PM`);
+          }, 5000);
+          */
+        } else {
+          showReminder("Could not fetch route. Check internet or API key.");
+        }
+      });
+    }
+    
+
+    document.getElementById("tripForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      const destination = document.getElementById("destination").value.trim();
+      const purpose = document.getElementById("purpose").value.trim();
+
+      if (!destination || !purpose) {
+        showReminder("Destination and purpose cannot be empty.");
+        return;
+      }
+
+     const testMode = document.getElementById("test-mode").checked;
+      formData.append("destination", destination);
+      formData.append("purpose", purpose);
+      formData.append("test_mode", testMode);  // it's defined properly
+
+      const response = await fetch("/start_trip", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.lat && data.lng) {
+        const location = { lat: data.lat, lng: data.lng };
+
+        if (tripMarker) tripMarker.setMap(null);
+        tripMarker = new google.maps.Marker({
+          position: location,
+          map: map,
+          title: data.destination,
+          icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+        });
+
+        map.panTo(location);
+        showToast(`Trip to ${data.destination} for ${data.purpose} is now live.`);
+
+        drawRouteToDestination(location, destination, purpose);
+      } else {
+        showToast("Trip saved, but location not found.");
+      }
+    });
+
+    // Voice Logic
+    let mediaRecorder;
+    let audioChunks = [];
+
+    async function startRecording(event) {
+      event?.preventDefault?.();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append("file", audioBlob, "recording.webm");
+
+        const res = await fetch("/voice_command", { method: "POST", body: formData });
+        const data = await res.json();
+
+        document.getElementById("voice-response").textContent = data.message;
+        if (data.destination && data.purpose) {
+          document.getElementById("destination").value = data.destination;
+          document.getElementById("purpose").value = data.purpose;
+
+          const destination = data.destination.trim();
+          const purpose = data.purpose.trim();
+
+          if (latestLocation && destination && purpose) {
+            drawRouteToDestination(latestLocation, destination, purpose);
+          }
+        }
+      };
+
+      mediaRecorder.start();
+      alert("Recording started... Speak now.");
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        mediaRecorder.stop();
+      }
+    }
+
+    async function sendVoiceCommand(event) {
+      event.preventDefault();
+      const file = document.getElementById("audio-file").files[0];
+      if (!file) return alert("Please upload an audio file.");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/voice_command", { method: "POST", body: formData });
+      const data = await res.json();
+
+      document.getElementById("voice-response").textContent = data.message;
+
+      if (data.destination && data.purpose) {
+        document.getElementById("destination").value = data.destination;
+        document.getElementById("purpose").value = data.purpose;
+
+        const destination = data.destination.trim();
+        const purpose = data.purpose.trim();
+
+        if (latestLocation && destination && purpose) {
+          drawRouteToDestination(latestLocation, destination, purpose);
+        }
+      }
+    }
+  </script>
+
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap">
+  </script>
+</body>
+</html>
+
