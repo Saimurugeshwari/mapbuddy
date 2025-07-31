@@ -9,7 +9,7 @@ def transcribe_and_respond(audio_bytes):
     try:
         print("Transcription initiated")
 
-        # Set credentials path if not set
+        # Set credentials path 
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv(
             "GOOGLE_APPLICATION_CREDENTIALS", "/etc/secrets/google-credentials.json"
         )
