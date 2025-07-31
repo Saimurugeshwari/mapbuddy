@@ -26,24 +26,29 @@ from threading import Thread
 
 def speak_text(text):
     def _speak():
-        if os.getenv("RENDER", "false") != "true":
-            engine = pyttsx3.init()
-            engine.say(text)
-            engine.runAndWait()
+        render_mode = os.getenv("RENDER", "false").lower()
+        if render_mode == "true":
+            print(f"(GitHub mode - silent): {text}")
         else:
-            print(f"(Silent cloud reminder): {text}")
+            try:
+                engine = pyttsx3.init()
+                engine.say(text)
+                engine.runAndWait()
+            except Exception as e:
+                print(f"(Voice playback error): {e}")
     Thread(target=_speak).start()
 
 async def remind_periodically(destination, purpose):
     while True:
         reminder = f"Reminder: You are heading to {destination} for {purpose}."
-        speak_text(reminder)  # Updated from send_notification
-        await asyncio.sleep(600)
+        print("Triggered reminder:", reminder)  # Debug log
+        speak_text(reminder)
+        await asyncio.sleep(30) #for testing purpose Reduced the time
 
 # Load environment variables
 load_dotenv()
 
-# Initialize app and MOUNT STATIC FIRST
+# Initialize app and MOUNT STATIC
 BASE_DIR = Path(__file__).resolve().parent.parent  # this points to your root (Mapbuddy_clean)
 
 app = FastAPI()
