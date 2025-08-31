@@ -1,0 +1,17 @@
+{
+    "feature":{
+        "Trip purpose":{
+            "userstory": "As a user I want to store and recall my trip purpose.",
+            "api":["/start_trip"],
+            "ui": ["#trip-purpose-input", "#start-trip-button"],
+            "teste": ["trip.test.js"]
+    },
+    "Live Location":{
+        "userstory": "As a user, I want to share my current location on the map",
+        "api":["/map"],
+        "ui":["#map-container"],
+        "tests": ["map.test.js"]
+
+    }
+}
+}

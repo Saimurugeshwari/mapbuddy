@@ -1,0 +1,22 @@
+{
+  "name": "mapbuddy",
+  "version": "1.0.0",
+  "description": "MapBuddy is a voice-enabled navigation companion designed to help people with short-term memory loss, amnesia, or early-stage dementia travel independently and safely.Unlike traditional GPS apps, MapBuddy reminds users of their trip purpose, gives current location awareness, and helps them re-orient themselves when confused.",
+  "main": "index.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Saimurugeshwari/mapbuddy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Saimurugeshwari/mapbuddy/issues"
+  },
+  "homepage": "https://github.com/Saimurugeshwari/mapbuddy#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.3.0"
+  }
+}
